@@ -8,7 +8,9 @@ from pybit.unified_trading import WebSocket
 from botSettings import *
 
 def handle_message(message):
-    print(message)
+    #print(message)
+    if checkIfTradable(message):
+        placeOrder(message)
 
 ws = WebSocket(
         testnet=False,
@@ -33,7 +35,7 @@ def min_order_value(current_price, min_order_size):
     return current_price * min_order_size
 
 def getCoinsToTrade(usdt_symbols):
-    line = f'Only coint with a price above {TRADE_COIN_ABOVE_PRICE} USDT will be traded!'
+    line = f'Only coins with a price above {TRADE_COIN_ABOVE_PRICE} USDT will be traded!'
     print(line)
     print("Fetching USDT symbols to trade ...")
     liquidationCandidates = []
@@ -54,13 +56,26 @@ def getCoinsToTrade(usdt_symbols):
 
 async def subsribeLiquidations(symbol_list):
     for symbol in symbol_list:
-        line = f'Subscribint to liquidation stream for {symbol}'
+        line = f'Subscribing to liquidation stream for {symbol}'
         print(line)
         try:
             ws.liquidation_stream(symbol, handle_message)
         except:
             print("Error subscribing to pair.")
     print("Done !")
+
+def checkIfTradable(liquidation_message):
+    #print(liquidation_message)
+    size = float(liquidation_message["data"]["size"])
+    price = float(liquidation_message["data"]["price"])
+    volume = size * price
+    if volume > MIN_LIQUIDATION_VOLUME:
+        line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
+        print(line)
+        return True
+
+def placeOrder(liquidation_message):
+
 
 async def main():
     usdt_symbols = get_symbols()
