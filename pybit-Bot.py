@@ -75,7 +75,7 @@ def checkIfTradable(liquidation_message):
         return True
 
 def placeOrder(liquidation_message):
-
+    print("TBD")
 
 async def main():
     usdt_symbols = get_symbols()
