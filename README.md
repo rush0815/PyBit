@@ -22,3 +22,7 @@ retry_codes: defaultdict(dict) = field(
     )
 
 4. save !
+
+
+
+Or just follow: https://github.com/bybit-exchange/pybit/issues/116
