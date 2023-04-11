@@ -2,3 +2,5 @@ API_KEY = 'your_key_here'
 API_SECRET = 'your_secret_key'
 TRADE_COIN_ABOVE_PRICE = 0.05       # trade only coins over this price
 MIN_LIQUIDATION_VOLUME = 500        # liquidatino threshold the bot will start trading
+PERCENT_ORDER_SIZE = 0.001
+BLACKLIST = 'ETHUSDT,BTCUSDT,ANTUSDT,AGIXUSDT'

@@ -5,10 +5,10 @@ import json
 import requests
 import asyncio
 from pybit.unified_trading import WebSocket
+from pybit.unified_trading import HTTP
 from botSettings import *
 
 def handle_message(message):
-    #print(message)
     if checkIfTradable(message):
         placeOrder(message)
 
@@ -16,6 +16,16 @@ ws = WebSocket(
         testnet=False,
         channel_type="linear"  
 )
+
+session = HTTP(
+    testnet=False,
+    api_key=API_KEY,
+    api_secret=API_SECRET,
+)
+
+blacklist = BLACKLIST.split(",")
+
+print(blacklist)
 
 def get_symbols():
     print("Fetching USDT symbols ...")
@@ -75,9 +85,43 @@ def checkIfTradable(liquidation_message):
         return True
 
 def placeOrder(liquidation_message):
-    print("TBD")
+    order_pair = liquidation_message["data"]["symbol"]
+    if order_pair in blacklist:
+        line = f'Pair {order_pair} is on blacklist!' 
+        print(line)
+        return
+    else:
+        orderSize = getWalletBalance() * PERCENT_ORDER_SIZE
+        side = liquidation_message["data"]["side"]
+        if side == 'Sell':
+            order_side = "Buy"
+        else:
+            order_side = "Sell"
+        print(order_side)
+        print(orderSize)
+        print(session.place_order(
+             category="linear",
+             symbol=order_pair,
+             side=order_side,
+             orderType="Market",
+             qty=orderSize,
+        ))
+        print("TBD")
+
+def getWalletBalance():
+    walletInfo = session.get_wallet_balance(accountType="CONTRACT")
+    return float(walletInfo["result"]["list"][0]["coin"][1]["walletBalance"])
 
 async def main():
+    walletInfo = session.get_wallet_balance(accountType="CONTRACT")
+    walletBalance = walletInfo["result"]["list"][0]["coin"][1]["walletBalance"]
+    equity = walletInfo["result"]["list"][0]["coin"][1]["equity"]
+    totalPositionIM = walletInfo["result"]["list"][0]["coin"][1]["totalPositionIM"]
+    unrealisedPnl = walletInfo["result"]["list"][0]["coin"][1]["unrealisedPnl"]
+    cumRealisedPnl = walletInfo["result"]["list"][0]["coin"][1]["cumRealisedPnl"]
+    line = f'Balance: {walletBalance}\nEquity: {equity}\nuPnL: {unrealisedPnl}\ncum PnL:{cumRealisedPnl}'
+    print(line)
+    
     usdt_symbols = get_symbols()
     await subsribeLiquidations(getCoinsToTrade(usdt_symbols))
 
