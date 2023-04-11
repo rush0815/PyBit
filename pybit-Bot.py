@@ -24,6 +24,7 @@ session = HTTP(
 )
 
 blacklist = BLACKLIST.split(",")
+whitelist = []
 
 print(blacklist)
 
@@ -78,8 +79,9 @@ def checkIfTradable(liquidation_message):
     #print(liquidation_message)
     size = float(liquidation_message["data"]["size"])
     price = float(liquidation_message["data"]["price"])
+    pair = liquidation_message["data"]["symbol"]
     volume = size * price
-    if volume > MIN_LIQUIDATION_VOLUME:
+    if volume > MIN_LIQUIDATION_VOLUME and pair in whitelist:
         line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
         print(line)
         return True
@@ -123,7 +125,8 @@ async def main():
     print(line)
     
     usdt_symbols = get_symbols()
-    await subsribeLiquidations(getCoinsToTrade(usdt_symbols))
+    whitelist = getCoinsToTrade(usdt_symbols)
+    await subsribeLiquidations(whitelist)
 
     while True:
         sleep(1)
