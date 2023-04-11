@@ -1,0 +1,1 @@
+TRADE_COIN_ABOVE_PRICE = 1      # trade only coins over this price
