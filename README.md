@@ -26,3 +26,6 @@ retry_codes: defaultdict(dict) = field(
 
 
 Or just follow: https://github.com/bybit-exchange/pybit/issues/116
+
+
+To use the code, rename botSettings.example to botSettings.py and set your API keys.
