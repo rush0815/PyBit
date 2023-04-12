@@ -7,10 +7,18 @@ import asyncio
 from pybit.unified_trading import WebSocket
 from pybit.unified_trading import HTTP
 from botSettings import *
+import ccxt
+from pprint import pprint
+
+blacklist = BLACKLIST.split(",")
+whitelist = []
 
 def handle_message(message):
     if checkIfTradable(message):
+        print("Placing order ...")
         placeOrder(message)
+    else:
+        print("Liquidated volume to low !")
 
 ws = WebSocket(
         testnet=False,
@@ -23,10 +31,16 @@ session = HTTP(
     api_secret=API_SECRET,
 )
 
-blacklist = BLACKLIST.split(",")
-whitelist = []
+exchange_id = 'bybit'
+exchange_class = getattr(ccxt, exchange_id)
+exchange = exchange_class({
+    'apiKey': API_KEY,
+    'secret': API_SECRET,
+})
 
-print(blacklist)
+#just a ccxt test call
+ret = exchange.fetchBalance ()
+print(ret['USDT'])
 
 def get_symbols():
     print("Fetching USDT symbols ...")
@@ -37,16 +51,19 @@ def get_symbols():
     print("Done !")
     return usdt_symbols
 
+
 def get_ticker_info(symbol_name):
     response = requests.get(f"https://api.bybit.com/v2/public/tickers?symbol={symbol_name}")
     response.raise_for_status()
     return response.json()["result"][0]
 
+
 def min_order_value(current_price, min_order_size):
     return current_price * min_order_size
 
+
 def getCoinsToTrade(usdt_symbols):
-    line = f'Only coins with a price above {TRADE_COIN_ABOVE_PRICE} USDT will be traded!'
+    line = f'Only coins with a price under {TRADE_COIN_MAX_ORDER_VALUE} USDT will be traded!'
     print(line)
     print("Fetching USDT symbols to trade ...")
     liquidationCandidates = []
@@ -57,13 +74,14 @@ def getCoinsToTrade(usdt_symbols):
         min_order_size = float(symbol["lot_size_filter"]["min_trading_qty"])
         min_order_value_result = min_order_value(current_price, min_order_size)
         
-        if min_order_value_result > TRADE_COIN_ABOVE_PRICE:
+        if min_order_value_result < TRADE_COIN_MAX_ORDER_VALUE:
             line = f'{symbol["name"]}, {current_price}, {min_order_size}, {min_order_value_result:.6f}'
             print(line)
             liquidationCandidates.append(symbol["name"])
     print("Done !")
 
     return liquidationCandidates
+
 
 async def subsribeLiquidations(symbol_list):
     for symbol in symbol_list:
@@ -75,16 +93,22 @@ async def subsribeLiquidations(symbol_list):
             print("Error subscribing to pair.")
     print("Done !")
 
+
 def checkIfTradable(liquidation_message):
     #print(liquidation_message)
     size = float(liquidation_message["data"]["size"])
     price = float(liquidation_message["data"]["price"])
     pair = liquidation_message["data"]["symbol"]
     volume = size * price
-    if volume > MIN_LIQUIDATION_VOLUME and pair in whitelist:
-        line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
-        print(line)
+    line = f'Got liquidatino for {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
+    print (line)
+    if (volume > MIN_LIQUIDATION_VOLUME) and (pair in whitelist):
+        #line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
+        #print(line)
         return True
+    else:
+        return False
+
 
 def placeOrder(liquidation_message):
     order_pair = liquidation_message["data"]["symbol"]
@@ -96,23 +120,26 @@ def placeOrder(liquidation_message):
         orderSize = getWalletBalance() * PERCENT_ORDER_SIZE
         side = liquidation_message["data"]["side"]
         if side == 'Sell':
-            order_side = "Buy"
+            order_side = "buy"
         else:
-            order_side = "Sell"
-        print(order_side)
-        print(orderSize)
-        print(session.place_order(
-             category="linear",
-             symbol=order_pair,
-             side=order_side,
-             orderType="Market",
-             qty=orderSize,
-        ))
-        print("TBD")
+            order_side = "sell"
+
+        # print(session.place_order(
+        #     category="linear",
+        #     symbol=order_pair,
+        #     side=order_side,
+        #     orderType="Market",
+        #     qty=str(orderSize),
+        # ))
+        order = exchange.createOrder (order_pair, 'market', order_side, 1, None, {'qty': 1})
+        pprint(order)
+        
+
 
 def getWalletBalance():
     walletInfo = session.get_wallet_balance(accountType="CONTRACT")
     return float(walletInfo["result"]["list"][0]["coin"][1]["walletBalance"])
+
 
 async def main():
     walletInfo = session.get_wallet_balance(accountType="CONTRACT")
@@ -125,7 +152,9 @@ async def main():
     print(line)
     
     usdt_symbols = get_symbols()
+    global whitelist
     whitelist = getCoinsToTrade(usdt_symbols)
+
     await subsribeLiquidations(whitelist)
 
     while True:
