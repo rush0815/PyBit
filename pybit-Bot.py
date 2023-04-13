@@ -10,6 +10,16 @@ from botSettings import *
 import ccxt
 from pprint import pprint
 
+HEADER = '\033[95m'
+OKBLUE = '\033[94m'
+OKCYAN = '\033[96m'
+OKGREEN = '\033[92m'
+WARNING = '\033[93m'
+FAIL = '\033[91m'
+ENDC = '\033[0m'
+BOLD = '\033[1m'
+UNDERLINE = '\033[4m'
+
 blacklist = BLACKLIST.split(",")
 whitelist = []
 
@@ -37,6 +47,10 @@ exchange = exchange_class({
     'apiKey': API_KEY,
     'secret': API_SECRET,
 })
+
+#exchange.set_sandbox_mode(True) # activates testnet mode
+#exchange.options['defaultType'] = 'swap'
+markets = exchange.load_markets()
 
 #just a ccxt test call
 ret = exchange.fetchBalance ()
@@ -103,27 +117,37 @@ def checkIfTradable(liquidation_message):
     line = f'Got liquidatino for {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
     print (line)
     if (volume > MIN_LIQUIDATION_VOLUME) and (pair in whitelist):
-        #line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
-        #print(line)
+        line = f'Got pair {liquidation_message["data"]["symbol"]}; Side {liquidation_message["data"]["side"]}; Liquidated volume {str(volume)}'
+        print(OKGREEN + line + ENDC)
         return True
     else:
         return False
 
 
 def placeOrder(liquidation_message):
-    order_pair = liquidation_message["data"]["symbol"]
-    if order_pair in blacklist:
-        line = f'Pair {order_pair} is on blacklist!' 
+    liquidated_pair = liquidation_message["data"]["symbol"]
+    if liquidated_pair in blacklist:
+        line = f'Pair {liquidated_pair} is on blacklist!' 
         print(line)
         return
     else:
-        orderSize = getWalletBalance() * PERCENT_ORDER_SIZE
-        side = liquidation_message["data"]["side"]
-        if side == 'Sell':
-            order_side = "buy"
-        else:
+        liquidated_pair_price = liquidation_message["data"]["price"]
+        liquidated_side = liquidation_message["data"]["side"]
+        orderSize_percentage = float(getWalletBalance()) * float(PERCENT_ORDER_SIZE)
+        order_cost = orderSize_percentage * float(liquidated_pair_price)
+        
+        order_pair_ccxt = liquidated_pair[ : liquidated_pair.find("USDT")] + "/USDT:USDT"
+        #order = exchange.createMarketBuyOrder(order_pair_ccxt, order_cost)
+        #print(order)
+        if liquidated_side == 'Sell':
             order_side = "sell"
-
+            order = exchange.createMarketSellOrder(order_pair_ccxt, order_cost)
+        else:
+            order_side = "buy"
+            order = exchange.createMarketBuyOrder(order_pair_ccxt, order_cost)
+        line = f'liquidated_price={liquidated_pair_price}\nliquidated_side = {liquidated_side}\nBalance = {getWalletBalance()}\norderSize_percentage = {orderSize_percentage}\norder_cost = {order_cost}'
+        print(line)
+        print (order)
         # print(session.place_order(
         #     category="linear",
         #     symbol=order_pair,
@@ -131,8 +155,8 @@ def placeOrder(liquidation_message):
         #     orderType="Market",
         #     qty=str(orderSize),
         # ))
-        order = exchange.createOrder (order_pair, 'market', order_side, 1, None, {'qty': 1})
-        pprint(order)
+        #order = exchange.createOrder (order_pair, 'market', order_side, 1, None, {'qty': 1})
+        #pprint(order)
         
 
 
