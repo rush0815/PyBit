@@ -147,7 +147,8 @@ def placeOrder(liquidation_message):
             #order = exchange.createMarketBuyOrder(order_pair_ccxt, order_cost)
         line = f'liquidated_price={liquidated_pair_price}\nliquidated_side = {liquidated_side}\nBalance = {getWalletBalance()}\norderSize_percentage = {orderSize_percentage}\norder_cost = {order_cost}'
         print(line)
-        print (order)
+        print("Placing order not implemented yet!")
+        #print (order)
         # print(session.place_order(
         #     category="linear",
         #     symbol=order_pair,
@@ -178,6 +179,19 @@ async def main():
     usdt_symbols = get_symbols()
     global whitelist
     whitelist = getCoinsToTrade(usdt_symbols)
+
+    # set position mode and leverage
+    for element in whitelist:
+        symbol = element[ : element.find("USDT")] + "/USDT:USDT"
+        line = f'Setting leverage and MarginMode for {symbol}'
+        print(line)
+        try:
+            result = exchange.setMarginMode(MARGIN_MODE, symbol, params = {"buyLeverage": int(LEVERAGE), "sellLeverage": int(LEVERAGE)})
+            line = f'OK! :: {result}'
+            print(line)
+        except Exception as e:
+            line = f'Failed! :: {e}'
+            print(line)
 
     await subsribeLiquidations(whitelist)
 
