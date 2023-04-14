@@ -141,10 +141,10 @@ def placeOrder(liquidation_message):
         #print(order)
         if liquidated_side == 'Sell':
             order_side = "sell"
-            order = exchange.createMarketSellOrder(order_pair_ccxt, order_cost)
+            #order = exchange.createMarketSellOrder(order_pair_ccxt, order_cost)
         else:
             order_side = "buy"
-            order = exchange.createMarketBuyOrder(order_pair_ccxt, order_cost)
+            #order = exchange.createMarketBuyOrder(order_pair_ccxt, order_cost)
         line = f'liquidated_price={liquidated_pair_price}\nliquidated_side = {liquidated_side}\nBalance = {getWalletBalance()}\norderSize_percentage = {orderSize_percentage}\norder_cost = {order_cost}'
         print(line)
         print (order)

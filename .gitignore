@@ -1,1 +1,3 @@
 botSettings.py
+ccxt_examples/market_order.py
+ccxt_examples/keys.py
