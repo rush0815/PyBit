@@ -183,14 +183,25 @@ async def main():
     # set position mode and leverage
     for element in whitelist:
         symbol = element[ : element.find("USDT")] + "/USDT:USDT"
-        line = f'Setting leverage and MarginMode for {symbol}'
+        line = f'Setting MarginMode for {symbol}'
         print(line)
+        
         try:
             result = exchange.setMarginMode(MARGIN_MODE, symbol, params = {"buyLeverage": int(LEVERAGE), "sellLeverage": int(LEVERAGE)})
-            line = f'OK! :: {result}'
+            line = f'{OKGREEN}OK!{ENDC} :: {result}'
             print(line)
         except Exception as e:
-            line = f'Failed! :: {e}'
+            line = f'{FAIL}Failed!{ENDC} :: {e}'
+            print(line)
+
+        line = f'Setting leverage for {symbol}'
+        print (line)
+        try:
+            result = exchange.setLeverage(LEVERAGE, symbol, params = {})
+            line = f'{OKGREEN}OK!{ENDC} :: {result}'
+            print(line)
+        except Exception as e:
+            line = f'{FAIL}Failed!{ENDC} :: {e}'
             print(line)
 
     await subsribeLiquidations(whitelist)
