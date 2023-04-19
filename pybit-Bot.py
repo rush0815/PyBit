@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+# TODO after setting leverage set all pairs to "Order by Value"
 from os import name
 from time import sleep
 import json
@@ -156,8 +158,9 @@ def placeOrder(liquidation_message):
         #     orderType="Market",
         #     qty=str(orderSize),
         # ))
-        #order = exchange.createOrder (order_pair, 'market', order_side, 1, None, {'qty': 1})
-        #pprint(order)
+        
+        order = exchange.createOrder (order_pair_ccxt, 'market', order_side, 1, None, {'qty': 1})
+        print(order)
         
 
 
@@ -203,6 +206,17 @@ async def main():
         except Exception as e:
             line = f'{FAIL}Failed!{ENDC} :: {e}'
             print(line)
+
+        line = f'Setting position mode to One-way for {symbol}'
+        print (line)
+        try:
+            result = exchange.set_position_mode(hedged = False, symbol = symbol)
+            line = f'{OKGREEN}OK!{ENDC} :: {result}'
+            print(line)
+        except Exception as e:
+            line = f'{FAIL}Failed!{ENDC} :: {e}'
+            print(line)
+
 
     await subsribeLiquidations(whitelist)
 
